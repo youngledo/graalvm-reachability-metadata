@@ -81,11 +81,16 @@ never by the repair's account. A gate another task already enforces, such as
    §root/FS-contribution-contract.3, compared with the previous version's
    stats: above 20% for a new library with calls to cover; no drop in the
    coverage ratio for a library update; the ordered repair comparison over the
-   overall report and every breakdown for the `fixes-*` labels, with `N/A` as
-   `0/0`; and only a nonzero covered-call count for a chunk
+   overall report and every breakdown for the `fixes-*` labels, with a previous
+   version's `N/A` as `0/0`; and only a nonzero covered-call count for a chunk
    (§FS-forge-chunked-dynamic-access). A breach the repair cannot close ends
    in `human-intervention`, where a maintainer weighs the explanation the
-   contract allows.
+   contract allows. Stats whose `dynamicAccess` for the run's version is `N/A`
+   never reach the gate, on any label: the report build that failed is itself
+   the failing check, with its own command and output. It is a fix request like
+   any other, except that a repository that could not be reached is external
+   and a Native Image build that ran out of memory goes to a maintainer at once
+   (§FS-human-intervention-policy).
 2. **Reporter-requested metadata.** Every entry the reporter's issue body
    states as explicit metadata JSON — a type or a resource glob — is in the
    shipped metadata (§root/FS-test-contract.1.5). A request made only in prose
@@ -474,6 +479,10 @@ add it. Valid cases include:
 - Dynamic-access coverage remains missing or suspiciously low after a
   successful generation path, making the result misleading without manual
   follow-up.
+- The Native Image build of the version's dynamic-access report runs out of
+  memory in finalization. No test or metadata edit helps and a retry on the same
+  host repeats it, so it is no transient condition and no fix request: the
+  reason names the build and its cause.
 - Local CI-equivalent verification passes only after shared repository files
   changed, so a maintainer must review repository-level effects before merge.
   The routed owner metadata §root/FS-contribution-contract.2 admits is not a

@@ -170,7 +170,7 @@ with `75` too (§FS-forge-stranded-claims.4.4).
 | `0` | proceed |
 | `10` | work for an agent: a cover prompt or a fix request is written |
 | `11` | `analyze` and `measure` only, whose `10` is a cover prompt: a fix request is written, for `analyze` when the listing build fails, for `measure` when the JVM tests fail |
-| `12` | the check still fails right after its own fix, after `native`'s or `finalize`'s last fix, or after the audit's edit; for `analyze`, also its first coverage report fails (§AR-forge-workflow-pipeline.4.5) |
+| `12` | the check still fails right after its own fix, after `native`'s or `finalize`'s last fix, or after the audit's edit; for `analyze`, also its first coverage report fails (§AR-forge-workflow-pipeline.4.5); for `finalize` and `audit`, also the dynamic-access report build ran out of memory (§AR-forge-missing-report) |
 | `20` | nothing to do: a new library has no version to repair, no target, exploration deferred, explore budget spent, or nothing to publish |
 | `21` | `setup-check` only: the setup verdict is recorded as a skip; go straight to `publish` |
 | `22` | `prepare` only: the artifact is recorded as not for Native Image; go straight to `publish` |

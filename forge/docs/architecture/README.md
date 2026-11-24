@@ -23,6 +23,7 @@ hold only retired stubs.
 | [§AR-forge-architecture](architecture.md#ar-forge-architecture-forge-architecture) | Forge architecture, and the map of every architecture ID |
 | [§AR-forge-workflow-pipeline](workflow-pipeline.md#ar-forge-workflow-pipeline-forge-workflow-pipeline) | The Rhei state machine of one issue run, state by state |
 | [§AR-forge-launcher](launcher.md#ar-forge-launcher-forge-launcher-and-exit-codes) | The launcher loop that claims an issue and starts its run, and the programs' exit codes |
+| [§AR-forge-missing-report](missing-report.md#ar-forge-missing-report-stats-without-a-dynamic-access-report) | How a failed report build stays away from the coverage gate |
 | [§AR-forge-workflow-prompts](workflow-prompts.md#ar-forge-workflow-prompts-forge-workflow-prompts) | The fixed instructions and handoffs every agent state receives |
 | [§AR-forge-run-location](architecture.md#ar-forge-run-location-one-run-location-for-progress-and-failure) | How progress and failure output share one phase/step vocabulary |
 | [§AR-forge-control-plane](architecture.md#ar-forge-control-plane-the-launcher-owns-queue-control) | The launcher owns queue control |
@@ -71,6 +72,8 @@ Files:
   issue run. Start here.
 - [launcher.md](launcher.md) — the launcher loop that claims an issue and
   starts its run, and the exit codes by which the programs route it.
+- [missing-report.md](missing-report.md) — stats a failed report build left
+  without a dynamic-access report.
 - [workflow-prompts.md](workflow-prompts.md) — what each agent state is told.
 - [architecture.md](architecture.md) — the control plane and the boundaries that
   keep generated work reviewable.

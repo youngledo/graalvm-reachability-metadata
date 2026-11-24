@@ -250,15 +250,15 @@ unrelated failure is a new request. `measure` has one exception: it resets to
 the last passing explore checkpoint and continues, so a cover pass that cannot
 be fixed costs that pass, not the run. `finalize` has another: its lane stops
 at the first failing step, so fixing one step can expose the next, and each
-failure is a new request until `finalize_fixes` (default 5) are spent; a
-failure after the last exits `12`. `native` has a budget too: the native
-build often fails in layers — a fix to `generateMetadata` exposes a `test`
-failure, a fix to some missing registrations exposes the rest — so each failure
-is a new request until `native_fixes` (default 3) are spent, and its fix
-reporting `cannot-fix` spends the next request instead of ending the run, the
-request quoting that report. `audit` sends its request once and never asks
-again: a failure after its edit exits `12`. Nothing else bounds `fix`: one
-turn is bounded by its agent timeout and the run by Rhei's transition limit.
+failure is a new request until `finalize_fixes` (default 5) are spent; a failure
+after the last, or one no fix can change (§AR-forge-missing-report), exits `12`.
+`native` has a budget too: the native build often fails in layers — a fix to
+`generateMetadata` exposes a `test` failure, a fix to some missing registrations
+exposes the rest — so each failure is a new request until `native_fixes`
+(default 3) are spent, and its fix reporting `cannot-fix` spends the next
+request, which quotes it, instead of ending the run. `audit` sends its request
+once: a failure after its edit exits `12`. Nothing else bounds `fix`: one turn
+is bounded by its agent timeout and the run by Rhei's transition limit.
 
 ## 7. The explore decision
 

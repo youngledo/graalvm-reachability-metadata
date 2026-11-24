@@ -14,6 +14,7 @@ structure chosen to satisfy it, with the workflow catalog in
 | --- | --- |
 | §AR-forge-workflow-pipeline | the Rhei state machine of one issue run, state by state |
 | §AR-forge-launcher | the launcher loop that claims an issue and starts its run, and the programs' exit codes |
+| §AR-forge-missing-report | how a failed report build stays away from the coverage gate |
 | §AR-forge-workflow-prompts | the fixed instructions and handoffs every agent state receives |
 | §AR-forge-run-location | how progress output and failure output share one phase/step vocabulary |
 | §AR-forge-control-plane | how the launcher, GitHub queues, and Rhei workspaces compose |
