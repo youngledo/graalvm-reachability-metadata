@@ -90,12 +90,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def outcome(step: str, code: int, bad_input: BadInput | None = None,
-            pending_request: str | None = None) -> dict[str, str] | None:
+            pending_request: str | None = None, unfixable: str = "") -> dict[str, str] | None:
     """The final state an exit leads to, for the launcher's close-out, or `None` to go on.
 
-    `pending_request` is the sender of the open fix request, the run state's.
+    `pending_request` is the sender of the open fix request, the run state's;
+    `unfixable` is why no fix can change the failures the step stopped on.
     §FS-forge-run-status
     """
+    if code == STILL_FAILING and unfixable:
+        return {"outcome": "human-intervention", "reason": unfixable}
     if step == "audit" and code == STILL_FAILING:
         return {"outcome": "human-intervention", "reason": "the audit's edit fails the checks it reran"}
     if step == "analyze" and code == STILL_FAILING and pending_request != step:
@@ -150,7 +153,10 @@ def diagnostics(workspace: str, step: str) -> dict[str, Any]:
 
 def _write_result(workspace: str, step: str, code: int, bad_input: BadInput | None = None) -> None:
     pending: str | None = load(workspace).pending_request if step == "analyze" else None
-    result: dict[str, Any] | None = outcome(step, code, bad_input, pending)
+    stopped_on: tuple[str, list[handoff.Failure]] | None = (
+        handoff.recorded_failures(workspace) if code == STILL_FAILING else None)
+    unfixable: str = handoff.unfixable(stopped_on[1]) if stopped_on is not None else ""
+    result: dict[str, Any] | None = outcome(step, code, bad_input, pending, unfixable)
     if result is not None:
         if result["outcome"] == "human-intervention":
             result = {**result, **diagnostics(workspace, step)}

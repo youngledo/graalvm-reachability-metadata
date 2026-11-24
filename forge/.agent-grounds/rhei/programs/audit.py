@@ -15,6 +15,7 @@ second pass.
 from __future__ import annotations
 
 import os
+from typing import Any
 
 import finalize
 import gates
@@ -59,7 +60,8 @@ def task(state: RunState) -> str:
         parts.append(f"Check only the tests and metadata this run changed or added: tests carried over "
                      f"unchanged from `{previous}` (compare with `tests/src/{state.group}/{state.artifact}/"
                      f"{previous}/`) are not yours to review.")
-    if gates.scopes(gates.dynamic_access(state, state.version))[gates.OVERALL].total == 0:
+    report: dict[str, Any] | None = gates.dynamic_access(state, state.version)
+    if report is not None and gates.scopes(report)[gates.OVERALL].total == 0:
         parts.append("This version reports no dynamic-access calls, so its tests matter less: test "
                      "depth is not a violation, and you add or deepen no test for it.")
     return "\n\n".join([*parts, PATTERNS])

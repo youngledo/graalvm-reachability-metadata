@@ -36,6 +36,8 @@ WRAPPER: re.Pattern[str] = re.compile(r"Could not resolve ")
 # A repository access failure: Gradle reports a 404 as `Could not find`, so any status here,
 # 401 and 403 included, means the repository failed (§AR-forge-workflow-pipeline.4.1).
 UNREACHABLE: re.Pattern[str] = re.compile(r"Could not (?:GET|HEAD|get resource) '")
+# The Native Image driver's line for a build that ran out of heap, or that the kernel killed for memory.
+OUT_OF_MEMORY: str = "The Native Image build process ran out of memory"
 JAVA_TEST: str = "javaTest"
 # The extension suite the coverage report also runs (§AR-code-coverage-improvement.2).
 EXTENSION_SUITE: str = "code-coverage-improvement"

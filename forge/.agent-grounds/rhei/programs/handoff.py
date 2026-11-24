@@ -35,6 +35,9 @@ class Failure:
     output: str
     # The commands this failure kept from running, which `fix` must pass too.
     blocked: tuple[str, ...] = ()
+    # Why no fix can change it, the outcome's reason; empty for one `fix` may be asked for.
+    # §AR-forge-missing-report
+    reason: str = ""
 
 
 def editable_paths(state: RunState, sender: str) -> list[str]:
@@ -113,8 +116,14 @@ def recorded_failures(workspace: str) -> tuple[str, list[Failure]] | None:
     if not os.path.isfile(path):
         return None
     recorded: dict[str, Any] = read_json(path)
-    return recorded["sender"], [Failure(item["command"], item["output"], tuple(item["blocked"]))
+    return recorded["sender"], [Failure(item["command"], item["output"], tuple(item["blocked"]),
+                                        item.get("reason", ""))
                                 for item in recorded["failures"]]
+
+
+def unfixable(failures: list[Failure]) -> str:
+    """Why no fix can change these failures, or empty when one may (§AR-forge-missing-report)."""
+    return next((failure.reason for failure in failures if failure.reason), "")
 
 
 def still_failing(workspace: str, sender: str, failures: list[Failure]) -> int:

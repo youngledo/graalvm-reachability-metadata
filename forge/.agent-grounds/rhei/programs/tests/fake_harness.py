@@ -25,7 +25,10 @@ from __future__ import annotations
 # styleFails (the failing style task), listFails, listsNoCalls (the listing
 # succeeds without output, as for a library without calls; an empty stored
 # listing then reports no calls), coverageFails, indexFails, and
-# stats (the dynamicAccess generateLibraryStats writes; else the coverage report's),
+# stats (the dynamicAccess generateLibraryStats writes; else the coverage report's, or one without calls),
+# reportFails (the native report build inside it fails, so it prints that build's output,
+# records `N/A`, and passes; "memory": out of memory, "unreachable": on Maven Central
+# answering 502, "daemon": as a stale daemon does, else otherwise),
 # matrixFails (the native-image mode whose `test` fails, as a missing registration),
 # and unreachableIn (the task, in any lane, that fails on Maven Central answering 502).
 # Beside them, a `stale-daemon` file in the Gradle user home names the task a daemon
@@ -59,6 +62,15 @@ def fail_build(cause):
     print(cause)
     print("BUILD FAILED in 4s")
     sys.exit(1)
+REPORT_FAILURES = {
+    "memory": "Terminating due to java.lang.OutOfMemoryError: GC overhead limit exceeded\n"
+              "The Native Image build process ran out of memory.\n"
+              "Please make sure your build system has more memory available.",
+    "unreachable": "> Could not GET 'https://repo.maven.apache.org/maven2/org/example/lib.pom'. Received status "
+                   "code 502 from server: Bad Gateway",
+    "daemon": "> Could not generate a decorated class for type GenerateDynamicAccessReportInvocationTask.",
+    "build": "Fatal error: com.oracle.graal.pointsto.constraints.UnsupportedFeatureException: "
+             "Unresolved type found: org.example.missing.Location"}
 def fail_unresolved():
     fail_build("\n".join("> Could not resolve all files for configuration ':%s'.\n"
                          "   > Could not find org.example:missing:1.0.\n     Required by:\n         root project 'lib'"
@@ -216,12 +228,18 @@ elif task == "generateLibraryStats":
     stats = os.path.join(root, "stats", group, artifact, version, "stats.json")
     os.makedirs(os.path.dirname(stats), exist_ok=True)
     report = os.path.join(project, "build", "reports", "dynamic-access", "dynamic-access-coverage.json")
-    dynamic = "N/A"
+    dynamic = {"coveredCalls": 0, "totalCalls": 0, "coverageRatio": 1.0, "breakdown": {}}
     if os.path.exists(report):
         totals = json.load(open(report))["totals"]
         dynamic = {"coveredCalls": totals["coveredCalls"], "totalCalls": totals["totalCalls"],
                    "coverageRatio": round(totals["coveredCalls"] / max(totals["totalCalls"], 1), 6), "breakdown": {}}
     dynamic = control.get("stats", dynamic)
+    if control.get("reportFails"):
+        print(REPORT_FAILURES[control["reportFails"]])
+        print("> Task :generateDynamicAccessReport FAILED\nBUILD FAILED in 4s")
+        print("Dynamic access report generation failed for %s with exit code 1. Writing dynamicAccess as N/A."
+              % coordinate)
+        dynamic = "N/A"
     json.dump({"versions": [{"version": version, "dynamicAccess": dynamic}]}, open(stats, "w"))
 '''
 

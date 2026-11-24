@@ -16,6 +16,8 @@ with the coordinate's native lanes and no agent fixup of its own; the first
 failing step becomes the fix request, a failing lane with its exact reproduction
 command (§AR-forge-workflow-pipeline.4.4), up to `finalize_fixes` requests
 (§AR-forge-workflow-pipeline.6).
+A report build the stats recorded as `N/A` is such a failing step, and one that
+ran out of memory stops the run (§AR-forge-missing-report).
 `audit` reruns the same lane over its edit (§AR-forge-workflow-pipeline.4.3).
 """
 from __future__ import annotations
@@ -35,12 +37,15 @@ from utility_scripts.local_ci_verification import (
 
 import gates
 import handoff
-from build_tools import (TaskResult, checkpoint, coordinate_task, head, rebase_onto_upstream, require_reachable,
-                         run_gradle)
+from build_tools import (OUT_OF_MEMORY, TaskResult, checkpoint, coordinate_task, gradle_display, head,
+                         rebase_onto_upstream, require_reachable, run_gradle)
 from exit_codes import AGENT_WORK, OK
 from run_state import RunState, load, runtime_path, save
 
 SENDER: str = "finalize"
+STATS: str = "generateLibraryStats"
+# The native build `generateLibraryStats` runs, and passes without (§AR-forge-missing-report).
+REPORT: str = "generateDynamicAccessReport"
 STEPS: tuple[list[str], ...] = (
     # `routeForeignMetadata` changes nothing when no condition is foreign.
     ["splitTestOnlyMetadata"],
@@ -49,7 +54,7 @@ STEPS: tuple[list[str], ...] = (
     ["spotlessApply"],
     ["spotlessCheck"],
     ["checkstyle"],
-    ["generateLibraryStats"],
+    [STATS],
 )
 # The CI matrix whose pairings of mode and Java version the native lanes take.
 MATRIX_SECTION: str = "generateChangedMetadataTestMatrix"
@@ -74,6 +79,33 @@ def native_lanes(state: RunState) -> list[dict[str, Any]]:
             for java in javas for mode in modes if java in allowed.get(mode, javas)]
 
 
+def run_step(workspace: str, state: RunState, step: list[str], prefix: str) -> TaskResult:
+    """Run one step; stats that hold no report for the version fail it as the report build.
+
+    `generateLibraryStats` passes over a failed report build and streams its
+    output, so the output says why it failed, an unreachable repository included
+    (§AR-forge-missing-report).
+    """
+    result: TaskResult = run_gradle(state.worktree, step_arguments(step, state),
+                                    runtime_path(workspace, "logs", f"{prefix}-{step[0]}.log"))
+    if step[0] != STATS or not result.ok or gates.dynamic_access(state, state.version) is not None:
+        return result
+    command: str = gradle_display(coordinate_task(REPORT, state.coordinate))
+    require_reachable(command, result.output)
+    return TaskResult(command=command, ok=False, log_path=result.log_path, output=result.output)
+
+
+def step_failure(result: TaskResult) -> handoff.Failure:
+    """The failed step; a report build that ran out of memory says so, and no fix can change it.
+
+    §FS-human-intervention-policy
+    """
+    if result.command.split()[1] != REPORT or OUT_OF_MEMORY not in result.output:
+        return handoff.Failure(result.command, result.tail)
+    reason: str = f"{REPORT} failed: the Native Image build ran out of memory"
+    return handoff.Failure(result.command, f"{reason}\n{result.tail}", reason=reason)
+
+
 def run_lane(workspace: str, state: RunState, prefix: str) -> list[handoff.Failure]:
     """Run each step, stopping at the first that fails; a pass checkpoints and records the gate.
 
@@ -83,10 +115,9 @@ def run_lane(workspace: str, state: RunState, prefix: str) -> list[handoff.Failu
     """
     for step in STEPS:
         result: TaskResult = run_with_stale_daemon_retry(state.worktree, state.coordinate, partial(
-            run_gradle, state.worktree, step_arguments(step, state),
-            runtime_path(workspace, "logs", f"{prefix}-{step[0]}.log")))
+            run_step, workspace, state, step, prefix))
         if not result.ok:
-            return [handoff.Failure(result.command, result.tail)]
+            return [step_failure(result)]
     breached: list[handoff.Failure] = gates.failures(workspace, state)
     if breached:
         return breached
@@ -122,6 +153,10 @@ def finalize(workspace: str) -> int:
         save(workspace, state)
         print(f"[finalize] every check passes at {state.checkpoint}")
         return OK
+    unfixable: str = handoff.unfixable(failures)
+    if unfixable:
+        print(f"[finalize] {unfixable}; no fix can change that")
+        return handoff.still_failing(workspace, SENDER, failures)
     commands: str = ", ".join(sorted({failure.command for failure in failures}))
     if state.finalize_requests >= state.budgets.finalize_fixes:
         save(workspace, state)

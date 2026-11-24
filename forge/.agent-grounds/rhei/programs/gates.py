@@ -40,7 +40,7 @@ SCOPE_GATE: str = "diff-scope gate"
 
 @dataclass(frozen=True)
 class Scope:
-    """One overall or breakdown dynamic-access scope; `N/A` is `0/0`."""
+    """One overall or breakdown dynamic-access scope; one without calls is `0/0`."""
 
     covered: int
     total: int
@@ -50,13 +50,16 @@ class Scope:
         return self.covered / self.total if self.total else 0.0
 
 
-def scopes(dynamic_access: Any) -> dict[str, Scope]:
-    """The overall scope and every breakdown of one stats `dynamicAccess` value."""
-    if not isinstance(dynamic_access, dict):
+def scopes(report: dict[str, Any] | None) -> dict[str, Scope]:
+    """The overall scope and every breakdown of one report; a baseline without one is `0/0`.
+
+    §root/FS-contribution-contract.3
+    """
+    if report is None:
         return {OVERALL: Scope(0, 0)}
-    found: dict[str, Scope] = {OVERALL: Scope(int(dynamic_access.get("coveredCalls") or 0),
-                                              int(dynamic_access.get("totalCalls") or 0))}
-    for name, value in (dynamic_access.get("breakdown") or {}).items():
+    found: dict[str, Scope] = {OVERALL: Scope(int(report.get("coveredCalls") or 0),
+                                              int(report.get("totalCalls") or 0))}
+    for name, value in (report.get("breakdown") or {}).items():
         found[name] = scopes(value)[OVERALL]
     return found
 
@@ -74,14 +77,20 @@ def repair_scope_passes(previous: Scope, new: Scope) -> bool:
     return previous.ratio - new.ratio <= 0.20
 
 
-def dynamic_access(state: RunState, version: str) -> Any:
+def dynamic_access(state: RunState, version: str) -> dict[str, Any] | None:
+    """The dynamic-access report in the version's stats, or `None` when no build produced one, as for `N/A`."""
     entry: dict[str, Any] | None = load_library_stats_entry(state.worktree, state.group, state.artifact, version)
-    return (entry or {}).get("dynamicAccess")
+    report: Any = (entry or {}).get("dynamicAccess")
+    return report if isinstance(report, dict) else None
 
 
 def coverage_breach(state: RunState) -> str | None:
     """Why the regenerated stats miss the label's coverage gate, or `None`."""
-    new: dict[str, Scope] = scopes(dynamic_access(state, state.version))
+    report: dict[str, Any] | None = dynamic_access(state, state.version)
+    if report is None:
+        # A missing report is neither zero coverage nor a pass (§root/FS-contribution-contract.3).
+        return f"not judged: {state.coordinate} has no dynamic-access report"
+    new: dict[str, Scope] = scopes(report)
     overall: Scope = new[OVERALL]
     if state.chunk.active:
         # Only zero coverage fails a chunk (§FS-forge-chunked-dynamic-access).

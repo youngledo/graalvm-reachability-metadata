@@ -248,11 +248,11 @@ class GateTest(unittest.TestCase):
             self.assertEqual(passes, gates.repair_scope_passes(gates.Scope(*previous), gates.Scope(*new)),
                              (previous, new))
 
-    def test_breakdowns_and_na_are_scopes(self) -> None:
+    def test_breakdowns_and_a_missing_baseline_are_scopes(self) -> None:
         found = gates.scopes({"coveredCalls": 3, "totalCalls": 4,
                               "breakdown": {"reflection": {"coveredCalls": 1, "totalCalls": 2}}})
         self.assertEqual({"overall": gates.Scope(3, 4), "reflection": gates.Scope(1, 2)}, found)
-        self.assertEqual({"overall": gates.Scope(0, 0)}, gates.scopes("N/A"))
+        self.assertEqual({"overall": gates.Scope(0, 0)}, gates.scopes(None))
 
     def test_only_explicit_metadata_json_is_a_request(self) -> None:
         body: str = ("MissingReflectionRegistrationError: org.example.Other\n"

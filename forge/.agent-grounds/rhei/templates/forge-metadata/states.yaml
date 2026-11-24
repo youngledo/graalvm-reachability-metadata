@@ -9,7 +9,7 @@
 #   finalize -- 0 --> audit; 10 (at most finalize_fixes times) --> fix
 #   audit -- 10 (first visit) --> fix; 0 --> publish
 #   fix --> fix-route -- 30-36 --> back to the sender; 40 --> human-intervention
-#   every sender -- 12 (failing after its last fix; analyze: first report) --> human-intervention
+#   every sender -- 12 (failing after its last fix, or where no fix helps) --> human-intervention
 #   publish -- 0 --> completed; 20 (nothing changed) --> nothing-to-publish
 #   every program -- 2 (bad input), 3 (infrastructure), or a crash --> failed
 #
@@ -547,7 +547,7 @@ transitions:
   - from: finalize
     to: human-intervention
     exit_code: 12
-    description: A check still fails after the last fix the budget allows.
+    description: A check still fails after the last fix the budget allows, or the report build ran out of memory.
 
   - from: finalize
     to: failed
